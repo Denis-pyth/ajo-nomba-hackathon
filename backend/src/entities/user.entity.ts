@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
 import { GroupMember } from './group-member.entity';
-import { Transaction } from './transaction.entity';
+import { Transaction } from './transaction.entity'; // <-- 1. Add this import
 
 @Entity('users')
 export class User {
@@ -11,24 +11,18 @@ export class User {
   fullName: string;
 
   @Column({ unique: true })
-  phoneNumber: string;
+  email: string;
 
-  @Column({ default: false })
-  isOfflineUser: boolean;
-
-  @Column({ default: 100 })
-  trustScore: number;
-
-  @Column({ nullable: true })
-  nombaCustomerId: string;
+  @Column()
+  passwordHash: string;
 
   @CreateDateColumn()
   createdAt: Date;
 
-  // Relationships
   @OneToMany(() => GroupMember, (member) => member.user)
   groupMemberships: GroupMember[];
 
+  // <-- 2. Add this block right here
   @OneToMany(() => Transaction, (transaction) => transaction.user)
   transactions: Transaction[];
 }
