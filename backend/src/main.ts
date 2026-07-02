@@ -18,6 +18,6 @@ async function bootstrap() {
   // Enable CORS so Jonnie's frontend can talk to your backend
   app.enableCors();
 
-  await app.listen(3000);
+  await app.listen(process.env.PORT || 3000);
 }
 bootstrap();
