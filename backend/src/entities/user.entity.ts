@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
+ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
 import { GroupMember } from './group-member.entity';
 import { Transaction } from './transaction.entity'; // <-- 1. Add this import
 
@@ -15,6 +15,14 @@ export class User {
 
   @Column()
   passwordHash: string;
+
+  // --- BANKING DETAILS REQUIRED FOR PAYOUTS ---
+  @Column({ nullable: true })
+  bankCode: string;
+
+  @Column({ nullable: true })
+  bankAccountNumber: string;
+  // --------------------------------------------
 
   @CreateDateColumn()
   createdAt: Date;

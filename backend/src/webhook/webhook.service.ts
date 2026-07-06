@@ -1,3 +1,4 @@
+import { NombaTransferService } from '../nomba/nomba-transfer.service';
 import { Injectable, NotFoundException, UnauthorizedException, ConflictException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -5,7 +6,6 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 
 import { AjoGroup, GroupStatus } from '../entities/ajo-group.entity';
-// Import your Enums here!
 import { Transaction, TransactionStatus, TransactionType } from '../entities/transaction.entity';
 import { GroupMember } from '../entities/group-member.entity';
 import { NombaWebhookDto } from './dto/nomba-webhook.dto';
@@ -25,29 +25,55 @@ export class WebhookService {
     private readonly groupMemberRepository: Repository<GroupMember>,
 
     private readonly configService: ConfigService,
+
+    private readonly nombaTransferService: NombaTransferService,
   ) {}
 
   async handleNombaPayment(payload: NombaWebhookDto, signature: string) {
-    const secret = this.configService.get<string>('NOMBA_SECRET');
-    if (!secret) {
-      this.logger.error('CRITICAL: NOMBA_SECRET is missing from environment variables!');
-      throw new InternalServerErrorException('Webhook configuration error');
-    }
+    // --- 1. SECURITY & VALIDATION --- 
+    const secret = this.configService.get<string>('NOMBA_WEBHOOK_SECRET');
+    if (!secret) throw new InternalServerErrorException('Webhook configuration error');
 
-    const expectedHash = crypto
-      .createHmac('sha512', secret)
-      .update(JSON.stringify(payload))
-      .digest('hex');
-
+    const expectedHash = crypto.createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex');
     if (signature !== expectedHash && signature !== 'bypass-test') {
       this.logger.error('Webhook signature mismatch! Rejecting payload.');
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
-    const { accountNumber, amount, transactionReference, narration } = payload.data;
-    this.logger.log(`Processing valid Nomba payment of ₦${amount} for account ${accountNumber}`);
+    // --- 2. EVENT ROUTING ---
+    const eventType = (payload as any).event_type || (payload as any).eventType;
 
-    // FIX: Changed 'reference' to 'nombaReference'
+    // SCENARIO A: A Payout Just Succeeded!
+    if (eventType === 'transfer_success' || eventType === 'transfer.success') {
+      this.logger.log('Received Outbound Payout Confirmation from Nomba!');
+      
+      const transferRef = (payload.data as any).id || (payload.data as any).merchantTxRef || (payload.data as any).reference;
+
+      const pendingPayout = await this.transactionRepository.findOne({
+        where: { nombaReference: transferRef, type: TransactionType.PAYOUT }
+      });
+
+      if (pendingPayout && pendingPayout.status === TransactionStatus.PENDING) {
+        pendingPayout.status = TransactionStatus.SUCCESS;
+        await this.transactionRepository.save(pendingPayout);
+        this.logger.log(` Payout Transaction ${transferRef} successfully marked as SUCCESS.`);
+        return { status: 'success', message: 'Payout ledger updated' };
+      } else {
+        this.logger.warn(`Could not find pending payout for ref: ${transferRef}`);
+        return { status: 'ignored', message: 'Payout not found or already processed' };
+      }
+    }
+
+    // SCENARIO B: Unknown Event (Ignore it)
+    if (eventType && !eventType.includes('success')) {
+      this.logger.log(`Received non-deposit/non-payout event type: ${eventType}. Ignoring.`);
+      return { status: 'ignored', reason: `Unhandled event type: ${eventType}` };
+    }
+
+    // --- SCENARIO C: Inbound Deposit ---
+    const { accountNumber, amount, transactionReference, narration } = payload.data;
+    this.logger.log(`Processing valid Nomba INBOUND payment of ₦${amount} for account ${accountNumber}`);
+
     const existingTransaction = await this.transactionRepository.findOne({
       where: { nombaReference: transactionReference } 
     });
@@ -58,8 +84,8 @@ export class WebhookService {
     }
 
     const group = await this.ajoGroupRepository.findOne({
-      where: { nombaVirtualAccountId: accountNumber },
-      relations: { members: true },
+      where: { nombaVirtualAccountId: accountNumber },     
+      relations: { members: { user: true } }, 
     });
 
     if (!group) {
@@ -67,7 +93,7 @@ export class WebhookService {
       throw new NotFoundException(`Ajo Group with virtual account ${accountNumber} not found`);
     }
 
-    // 2. Prevent processing if group is completed, BUT log the money!
+    // Edge-case: Prevent processing if group is completed, BUT log the money!
     if (group.status === GroupStatus.COMPLETED) {
       this.logger.warn(`LATE PAYMENT ALERT: Money received for COMPLETED group: ${group.name}. Logging for refund.`);
       
@@ -77,17 +103,13 @@ export class WebhookService {
         narration: `LATE PAYMENT: ${narration || 'Requires Refund'}`,
         status: TransactionStatus.SUCCESS, 
         type: TransactionType.DEPOSIT,
-        group: group, // We still link it to the group so support knows where it was meant to go
+        group: group, 
       });
 
       await this.transactionRepository.save(excessTransaction);
-
-      // Return early so the 'CLASSIC' rotation logic doesn't run, 
-      // but the money is safely recorded in the database.
       return { status: 'logged_for_refund', transactionId: excessTransaction.id };
     }
 
-    // FIX: Using strict Enums and 'nombaReference'
     const transaction = this.transactionRepository.create({
       amount: Number(amount),
       nombaReference: transactionReference,
@@ -108,7 +130,6 @@ export class WebhookService {
           break; 
         }
 
-        // FIX: Using strict Enums here too
         const groupTransactions = await this.transactionRepository.find({
           where: { group: { id: group.id }, status: TransactionStatus.SUCCESS, type: TransactionType.DEPOSIT }
         });
@@ -128,10 +149,45 @@ export class WebhookService {
           if (nextInLine) {
             this.logger.log(`Next in line is User ID: ${nextInLine.userId} at Slot: ${nextInLine.payoutSlot}`);
             
-            // TODO: Trigger Nomba Transfer API here
+            try {
+              const userBankCode = nextInLine.user.bankCode; 
+              const userAccountNumber = nextInLine.user.bankAccountNumber;
+              const payoutNarration = `Ajó Payout for ${group.name} - Cycle Complete`;
+
+              this.logger.log(`Verifying bank account for User ID: ${nextInLine.userId}...`);
+              const accountName = await this.nombaTransferService.verifyBankAccount(
+                userAccountNumber,
+                userBankCode
+              );
+
+              this.logger.log(`Bank verified (${accountName}). Executing payout of ₦${targetPot}...`);
+              const transferResult = await this.nombaTransferService.executePayout(
+                targetPot,
+                userAccountNumber,
+                userBankCode,
+                accountName,
+                payoutNarration
+              );
+
+              const payoutTxn = this.transactionRepository.create({
+                amount: targetPot,
+                nombaReference: transferResult.nombaReference,
+                narration: payoutNarration,
+                status: TransactionStatus.PENDING, 
+                type: TransactionType.PAYOUT, 
+                group: group,
+              });
+              await this.transactionRepository.save(payoutTxn);
+
+              this.logger.log(`Payout successfully initiated! Transfer Ref: ${transferResult.nombaReference}`);
+
+              nextInLine.hasReceivedPayout = true;
+              await this.groupMemberRepository.save(nextInLine);
+
+            } catch (error) {
+              this.logger.error(`CRITICAL: Failed to execute automated payout for User ID: ${nextInLine.userId}`, error);
+            }
             
-            nextInLine.hasReceivedPayout = true;
-            await this.groupMemberRepository.save(nextInLine);
           } else {
              this.logger.log(`All members in ${group.name} have been paid. Cycle complete!`);
              group.status = GroupStatus.COMPLETED;

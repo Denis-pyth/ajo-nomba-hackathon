@@ -19,14 +19,22 @@ export class WebhookController {
   @ApiHeader({ 
     name: 'nomba-signature', 
     description: 'Hash signature for webhook security verification', 
+    required: true 
+  })
+  @ApiHeader({ 
+    name: 'nomba-signature-algorithm', 
+    description: 'Algorithm used for signing, expected to be HmacSHA256', 
     required: false 
   })
   @ApiResponse({ status: 200, description: 'Webhook successfully received and processed.' })
   async handleNombaWebhook(
     @Body() payload: NombaWebhookDto,
-    @Headers('nomba-signature') signature: string, 
+    @Headers('nomba-signature') signature: string,
+    @Headers('nomba-signature-algorithm') algorithm: string,
   ) {
     this.logger.log(`Incoming Nomba Webhook Payload...`);
+    
+    // Pass the payload and the signature to the service for SHA-256 verification
     return await this.webhookService.handleNombaPayment(payload, signature || '');
   }
 }

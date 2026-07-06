@@ -12,6 +12,8 @@ import { Transaction } from './entities/transaction.entity';
 import { WebhookModule } from './webhook/webhook.module';
 import { GroupModule } from './group/group.module';
 import { AuthModule } from './auth/auth.module';
+import { NombaModule } from './nomba/nomba.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { AuthModule } from './auth/auth.module';
     AuthModule,
     GroupModule,
     WebhookModule,
+    NombaModule,
+    UsersModule,
   ],
   controllers: [], 
   providers: [],  
