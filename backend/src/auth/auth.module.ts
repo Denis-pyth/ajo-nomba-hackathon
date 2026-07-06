@@ -1,25 +1,30 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
-import { User } from '../entities/user.entity';
+import { AuthController } from './auth.controller';
+import { JwtStrategy } from './jwt.strategy';
+ import { UsersModule } from '../users/users.module'; 
+ import { User } from '../entities/user.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
+    UsersModule, 
+    PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        // Use a default secret if the .env variable isn't set yet
-        secret: configService.get<string>('JWT_SECRET') || 'hackathon-super-secret',
-        signOptions: { expiresIn: '7d' }, // Token lasts 7 days
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1d' }, // Token lasts for 1 day
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, JwtStrategy],
+  exports: [AuthService],
 })
 export class AuthModule {}
