@@ -1,0 +1,376 @@
+openapi: 3.0.3
+info:
+  title: Ajo API — Automated ROSCA Engine
+  description: >
+    Backend API for the Ajo automated group-savings platform, built for the
+    Nomba Hackathon (Infrastructure Track). Any developer can integrate this
+    API to add automated, trustless rotating savings groups to their own
+    product. This spec is a static snapshot — the live, interactive version
+    is served at GET /api/docs when the server is running.
+  version: "1.0"
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://sandbox.nomba.com
+    description: Nomba sandbox (external, referenced by the backend)
+
+tags:
+  - name: Authentication
+  - name: Users
+  - name: Ajo Groups
+  - name: Nomba Webhooks
+
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDto'
+      responses:
+        '201':
+          description: User created successfully with JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login and get JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '200':
+          description: Returns JWT access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /users/profile/bank:
+    patch:
+      tags: [Users]
+      summary: Update user bank details for payouts
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBankDetailsDto'
+      responses:
+        '200':
+          description: Bank details updated successfully
+        '401':
+          description: Unauthorized
+
+  /groups:
+    post:
+      tags: [Ajo Groups]
+      summary: Create a new Ajo group (provisions a Nomba Virtual Account)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupDto'
+      responses:
+        '201':
+          description: Group created with a Nomba Virtual Account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AjoGroup'
+    get:
+      tags: [Ajo Groups]
+      summary: Get all active groups
+      responses:
+        '200':
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AjoGroup'
+
+  /groups/{id}/join:
+    post:
+      tags: [Ajo Groups]
+      summary: Join a group and receive a rotation ("fastest-finger") slot
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinGroupDto'
+      responses:
+        '201':
+          description: Membership created
+        '404':
+          description: Group or user not found
+        '400':
+          description: User already joined this group
+
+  /groups/{id}/virtual-account:
+    delete:
+      tags: [Ajo Groups]
+      summary: Close a group and expire its Nomba Virtual Account
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Virtual Account expired and group closed successfully
+
+  /groups/{id}/reconcile:
+    get:
+      tags: [Ajo Groups]
+      summary: Manually requery Nomba's Transactions API to sync missed webhooks
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Transactions successfully reconciled
+
+  /groups/{id}/statement:
+    get:
+      tags: [Ajo Groups]
+      summary: Download the group's ledger as a CSV statement
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /webhook/nomba:
+    post:
+      tags: [Nomba Webhooks]
+      summary: Receive Nomba payment/transfer webhooks (deposits & payout confirmations)
+      description: >
+        Verifies the HMAC SHA-256 signature via the `nomba-signature` header
+        before processing. Drives the automated payout engine.
+      parameters:
+        - name: nomba-signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC SHA-256 signature of the payload
+        - name: nomba-signature-algorithm
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Signing algorithm, expected HmacSHA256
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NombaWebhookDto'
+      responses:
+        '200':
+          description: Webhook successfully received and processed
+        '401':
+          description: Invalid webhook signature
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    GroupId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Ajo group ID
+
+  schemas:
+    RegisterDto:
+      type: object
+      required: [fullName, email, password]
+      properties:
+        fullName:
+          type: string
+          example: Desire Denis
+        email:
+          type: string
+          example: desire@example.com
+        password:
+          type: string
+          example: securepassword123
+
+    LoginDto:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          example: desire@example.com
+        password:
+          type: string
+          example: securepassword123
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+
+    UpdateBankDetailsDto:
+      type: object
+      required: [bankCode, bankAccountNumber]
+      properties:
+        bankCode:
+          type: string
+          example: "058"
+          description: NIBSS bank code (e.g. GTBank is 058)
+        bankAccountNumber:
+          type: string
+          example: "0123456789"
+          description: 10-digit NUBAN account number
+
+    CreateGroupDto:
+      type: object
+      required: [name, mode, contributionAmount, cycleFrequency]
+      properties:
+        name:
+          type: string
+          example: MacBook Pro Savings
+        mode:
+          type: string
+          enum: [CLASSIC, PURPOSE_BOUND, AGENT_LED]
+          example: CLASSIC
+        contributionAmount:
+          type: number
+          example: 50000
+        cycleFrequency:
+          type: string
+          enum: [WEEKLY, MONTHLY]
+          example: WEEKLY
+        targetMerchantId:
+          type: string
+          description: Required only for PURPOSE_BOUND mode
+          example: MERCH_999
+
+    JoinGroupDto:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          format: uuid
+          example: uuid-of-the-user
+
+    AjoGroup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mode:
+          type: string
+          enum: [CLASSIC, PURPOSE_BOUND, AGENT_LED]
+        contributionAmount:
+          type: number
+        cycleFrequency:
+          type: string
+          enum: [WEEKLY, MONTHLY]
+        nombaVirtualAccountId:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, ACTIVE, COMPLETED]
+        createdAt:
+          type: string
+          format: date-time
+
+    NombaWebhookDto:
+      type: object
+      description: >
+        Covers both inbound-deposit events (account.payment.success) and
+        outbound-transfer confirmation events (transfer_success /
+        transfer.success). Nomba payloads may use camelCase or snake_case
+        for the event type field, so both are accepted.
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          example: account.payment.success
+          description: >
+            Observed values include account.payment.success,
+            account.payment.failed, transfer_success, transfer.success
+        event_type:
+          type: string
+          description: Snake_case alternative to eventType, if present
+        createdAt:
+          type: string
+          format: date-time
+        data:
+          type: object
+          properties:
+            amount:
+              type: number
+            currency:
+              type: string
+            transactionReference:
+              type: string
+            paymentReference:
+              type: string
+            orderId:
+              type: string
+            accountNumber:
+              type: string
+            bankName:
+              type: string
+            narration:
+              type: string
+            settlementAmount:
+              type: number
+            fee:
+              type: number
+            id:
+              type: string
+              description: Transfer confirmation ID (transfer_success events)
+            merchantTxRef:
+              type: string
+              description: Merchant transfer reference (transfer_success events)
+            reference:
+              type: string
+              description: Alternate transfer reference (transfer_success events)
