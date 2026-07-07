@@ -31,7 +31,6 @@ const mainMenu = [
   { label: "Group Ledger", icon: IconClipboard, href: "/dashboard/ledger" },
   { label: "Statements", icon: IconDocument, href: "/dashboard/statements" },
   { label: "Trust Score", icon: IconShield, href: "/dashboard/trust" },
-  { label: "Notifications", icon: IconBell, badge: 0, href: "/dashboard/notifications" },
 ];
 
 const otherTools = [
@@ -39,7 +38,11 @@ const otherTools = [
   { label: "Need Help?", icon: IconHelp, href: "/dashboard/help" },
 ];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<StoredUser | null>(null);
@@ -62,7 +65,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
         <div className="size-10 border-[3px] border-[#0f9d58]/20 border-t-[#0f9d58] rounded-full animate-spin" />
-        <p className="text-sm text-[#737373] font-medium">Loading your dashboard...</p>
+        <p className="text-sm text-[#737373] font-medium">
+          Loading your dashboard...
+        </p>
       </div>
     );
   }
@@ -72,8 +77,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar */}
       <aside className="w-[280px] min-h-screen flex flex-col justify-between p-6 sticky top-0 left-0 shrink-0 bg-gradient-to-b from-[#0f9d58]/[0.04] via-[#0f9d58]/[0.02] to-transparent border-r border-[#0f9d58]/10">
         <div className="mb-8">
-          <Link href="/" className="relative inline-block h-10 w-[77px]">
-            <Image src="/logo.png" alt="Ajo" fill className="object-contain" priority sizes="77px" />
+          <Link href="/" className="relative inline-block h-10 w-[80px]">
+            <Image
+              src="/logo.png"
+              alt="Ajo"
+              fill
+              className="object-contain"
+              priority
+              sizes="80px"
+            />
           </Link>
         </div>
 
@@ -81,13 +93,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-3">
               <IconChevronRight className="size-3 text-[#0a0a0a]" />
-              <span className="text-[11px] font-semibold tracking-[0.06em] text-[#737373] uppercase">Main Menu</span>
+              <span className="text-[11px] font-semibold tracking-[0.06em] text-[#737373] uppercase">
+                Main Menu
+              </span>
             </div>
             <nav className="flex flex-col gap-1">
               {mainMenu.map((item) => {
-                const isActive = item.href === "/dashboard"
-                  ? pathname === "/dashboard"
-                  : pathname === item.href || pathname.startsWith(item.href + "/");
+                const isActive =
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
+                    : pathname === item.href ||
+                      pathname.startsWith(item.href + "/");
                 const Icon = item.icon;
                 return (
                   <Link
@@ -115,11 +131,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-3">
               <IconChevronRight className="size-3 text-[#0a0a0a]" />
-              <span className="text-[11px] font-semibold tracking-[0.06em] text-[#737373] uppercase">Other Tools</span>
+              <span className="text-[11px] font-semibold tracking-[0.06em] text-[#737373] uppercase">
+                Other Tools
+              </span>
             </div>
             <nav className="flex flex-col gap-1">
               {otherTools.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
                 const Icon = item.icon;
                 return (
                   <Link
@@ -155,12 +175,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center justify-between py-2.5 px-3 rounded-[56px] hover:bg-[#0f9d58]/8 transition-all duration-200 cursor-pointer">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="relative size-10 rounded-full overflow-hidden shrink-0 ring-2 ring-[#0f9d58]/20">
-                <Image src="/logo.png" alt="User" fill className="object-cover" sizes="40px" />
+                <Image
+                  src="/logo.png"
+                  alt="User"
+                  fill
+                  className="object-cover"
+                  sizes="40px"
+                />
               </div>
               <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-sm font-medium text-[#0a0a0a] truncate">{user?.email || "Member"}</span>
+                <span className="text-sm font-medium text-[#0a0a0a] truncate">
+                  {user?.email || "Member"}
+                </span>
                 <div className="flex items-center gap-1">
-                  <span className="text-[11px] text-[#737373]">Verified Member</span>
+                  <span className="text-[11px] text-[#737373]">
+                    Verified Member
+                  </span>
                   <IconVerified className="size-3.5 text-[#0f9d58]" />
                 </div>
               </div>
@@ -188,9 +218,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button className="relative size-10 flex items-center justify-center rounded-xl text-[#0a0a0a] hover:text-[#0f9d58] hover:bg-[#0f9d58]/8 transition-all duration-200 cursor-pointer">
                 <IconMessage className="size-[22px]" />
               </button>
-              <div className="relative size-10 rounded-full overflow-hidden ring-2 ring-[#0f9d58]/20">
-                <Image src="/logo.png" alt="User" fill className="object-cover" sizes="40px" />
-              </div>
               <button className="relative size-10 flex items-center justify-center rounded-xl text-[#0a0a0a] hover:text-[#0f9d58] hover:bg-[#0f9d58]/8 transition-all duration-200 cursor-pointer">
                 <IconBell className="size-[22px]" />
               </button>

@@ -304,12 +304,7 @@ export default function DashboardPage() {
             {groups.length === 0 && (
               <div className="flex flex-col gap-3 items-center py-10 text-center">
                 <p className="text-sm text-[#737373]">You haven&apos;t joined any groups yet.</p>
-                <Link
-                  href="/dashboard/groups/new"
-                  className="px-5 py-2.5 rounded-full bg-[#0f9d58] text-white text-sm font-medium hover:bg-[#0e8f50] transition-colors"
-                >
-                  Create a Group
-                </Link>
+                <p className="text-xs text-[#a3a3a3]">Use the New Group button in the top bar to create one.</p>
               </div>
             )}
             {groups.map((group) => (

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getAllGroups, joinGroup, Group } from "@/lib/api";
 import { getUser } from "@/lib/auth";
-import { IconPlus, IconPeople, IconArrowUpRight } from "../icons";
+import { IconPeople, IconArrowUpRight } from "../icons";
 
 function formatCurrency(amount: number): string {
   return `₦${amount.toLocaleString("en-NG")}`;
@@ -120,9 +120,15 @@ export default function GroupsPage() {
         </div>
 
         {group.nombaVirtualAccountId && (
-          <div className="flex flex-col gap-1 p-3 rounded-xl bg-[#f5f5f5]">
-            <span className="text-[10px] font-medium text-[#737373] uppercase">Account Number</span>
-            <span className="text-sm font-semibold text-[#0a0a0a] tracking-wider">{group.nombaVirtualAccountId}</span>
+          <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-[#f5f5f5]">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-medium text-[#737373] uppercase">Bank</span>
+              <span className="text-sm font-semibold text-[#0a0a0a]">Nomba Bank MFB</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-medium text-[#737373] uppercase">Account Number</span>
+              <span className="text-sm font-semibold text-[#0a0a0a] tracking-wider">{group.nombaVirtualAccountId}</span>
+            </div>
           </div>
         )}
 
@@ -151,18 +157,9 @@ export default function GroupsPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[#0a0a0a]">My Groups</h1>
-          <p className="text-sm text-[#737373] mt-0.5">{myGroups.length} group{myGroups.length !== 1 ? "s" : ""} you belong to</p>
-        </div>
-        <Link
-          href="/dashboard/groups/new"
-          className="flex items-center gap-1.5 bg-[#0f9d58] hover:bg-[#0e8f50] text-white px-5 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 shadow-lg shadow-[#0f9d58]/20 hover:shadow-xl hover:shadow-[#0f9d58]/25 active:scale-[0.98] cursor-pointer"
-        >
-          <IconPlus className="size-4" />
-          New Group
-        </Link>
+      <div>
+        <h1 className="text-xl font-semibold text-[#0a0a0a]">My Groups</h1>
+        <p className="text-sm text-[#737373] mt-0.5">{myGroups.length} group{myGroups.length !== 1 ? "s" : ""} you belong to</p>
       </div>
 
       {myGroups.length > 0 && (
@@ -176,12 +173,7 @@ export default function GroupsPage() {
       {myGroups.length === 0 && (
         <div className="flex flex-col gap-3 items-center py-12 text-center rounded-2xl border border-dashed border-[#e5e5e5]">
           <p className="text-sm text-[#737373]">You haven&apos;t joined any groups yet.</p>
-          <Link
-            href="/dashboard/groups/new"
-            className="px-5 py-2.5 rounded-full bg-[#0f9d58] text-white text-sm font-medium hover:bg-[#0e8f50] transition-colors"
-          >
-            Create a Group
-          </Link>
+          <p className="text-xs text-[#a3a3a3]">Create a new group from the top bar.</p>
         </div>
       )}
 
