@@ -19,15 +19,6 @@ export interface AuthResponse {
   };
 }
 
-export interface UserProfile {
-  id: string;
-  fullName: string;
-  email: string;
-  bankCode: string | null;
-  bankAccountNumber: string | null;
-  createdAt: string;
-}
-
 export interface GroupMember {
   id: string;
   userId: string;
@@ -52,17 +43,6 @@ export interface Group {
   mySlot?: number;
   hasReceivedPayout?: boolean;
   joinedAt?: string;
-}
-
-export interface Transaction {
-  id: string;
-  amount: number;
-  nombaReference: string;
-  status: "PENDING" | "SUCCESS" | "FAILED";
-  type: "DEPOSIT" | "PAYOUT";
-  narration: string | null;
-  createdAt: string;
-  groupName: string | null;
 }
 
 export interface CreateGroupRequest {
@@ -141,34 +121,10 @@ export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
   });
 }
 
-export async function getMe(): Promise<UserProfile> {
-  return fetchApi<UserProfile>("/auth/me", {
-    method: "GET",
-  });
-}
-
-export async function getMyGroups(): Promise<Group[]> {
-  return fetchApi<Group[]>("/users/me/groups", {
-    method: "GET",
-  });
-}
-
-export async function getMyTransactions(): Promise<Transaction[]> {
-  return fetchApi<Transaction[]>("/users/me/transactions", {
-    method: "GET",
-  });
-}
-
 export async function createGroup(data: CreateGroupRequest): Promise<Group> {
   return fetchApi<Group>("/groups", {
     method: "POST",
     body: JSON.stringify(data),
-  });
-}
-
-export async function getGroup(id: string): Promise<Group> {
-  return fetchApi<Group>(`/groups/${id}`, {
-    method: "GET",
   });
 }
 

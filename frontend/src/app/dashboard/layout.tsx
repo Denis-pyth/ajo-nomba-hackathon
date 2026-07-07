@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { isAuthenticated, clearAuth } from "@/lib/auth";
-import { getMe, UserProfile } from "@/lib/api";
+import { isAuthenticated, clearAuth, getUser, StoredUser } from "@/lib/auth";
 import {
   IconDashboard,
   IconPeople,
@@ -43,7 +42,7 @@ const otherTools = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<StoredUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,13 +51,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return;
     }
 
-    getMe()
-      .then(setUser)
-      .catch(() => {
-        clearAuth();
-        router.replace("/login");
-      })
-      .finally(() => setLoading(false));
+    const u = getUser();
+    if (u) {
+      setUser(u);
+    }
+    setLoading(false);
   }, [router]);
 
   if (loading) {
@@ -159,7 +156,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Image src="/logo.png" alt="User" fill className="object-cover" sizes="40px" />
               </div>
               <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-sm font-medium text-[#0a0a0a] truncate">{user?.fullName || "Member"}</span>
+                <span className="text-sm font-medium text-[#0a0a0a] truncate">{user?.email || "Member"}</span>
                 <div className="flex items-center gap-1">
                   <span className="text-[11px] text-[#737373]">Verified Member</span>
                   <IconVerified className="size-3.5 text-[#0f9d58]" />

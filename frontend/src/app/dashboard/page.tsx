@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getMyGroups, getMyTransactions, Group, Transaction } from "@/lib/api";
+import { getAllGroups, Group } from "@/lib/api";
+import { getUser } from "@/lib/auth";
 import {
   IconPeople,
   IconCard,
@@ -10,28 +11,10 @@ import {
   IconWallet,
   IconArrowUpRight,
   IconMoreVertical,
-  IconArrowDown,
-  IconArrowUp,
-  IconRefund,
 } from "./icons";
 
 function formatCurrency(amount: number): string {
   return `₦${amount.toLocaleString("en-NG")}`;
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-NG", { month: "short", day: "numeric" });
 }
 
 function frequencyLabel(freq: string): string {
@@ -111,7 +94,7 @@ function ActiveGroupCard({ group }: { group: Group }) {
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] text-[#a3a3a3] font-medium uppercase">Members</span>
-              <span className="text-sm font-semibold text-[#0a0a0a]">{group.memberCount || 0}</span>
+              <span className="text-sm font-semibold text-[#0a0a0a]">{group.memberCount || group.members?.length || 0}</span>
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] text-[#a3a3a3] font-medium uppercase">Status</span>
@@ -181,9 +164,7 @@ function UpcomingPayments({ groups }: { groups: Group[] }) {
   );
 }
 
-function RecentActivity({ transactions }: { transactions: Transaction[] }) {
-  const sorted = [...transactions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 10);
-
+function RecentActivity() {
   return (
     <div className="flex flex-col gap-6 p-5 rounded-2xl border border-[#f0f0f0] bg-white">
       <div className="flex items-center justify-between">
@@ -192,40 +173,9 @@ function RecentActivity({ transactions }: { transactions: Transaction[] }) {
           View All
         </Link>
       </div>
-      <div className="flex flex-col gap-4">
-        {sorted.length === 0 && (
-          <p className="text-sm text-[#737373] text-center py-4">No activity yet</p>
-        )}
-        {sorted.map((t) => {
-          const type = t.type === "DEPOSIT" ? "incoming" : "outgoing";
-          const amountPrefix = t.type === "DEPOSIT" ? "+" : "-";
-          const amountColor = t.type === "DEPOSIT" ? "text-[#22c55e]" : "text-[#0a0a0a]";
-
-          return (
-            <div key={t.id} className="flex items-center justify-between gap-2 hover:bg-[#0a0a0a]/[0.02] -mx-1 px-1 py-1 rounded-xl transition-colors">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className={`flex items-center justify-center size-8 shrink-0 rounded-xl ${
-                  type === "incoming" ? "bg-[#22c55e]/10 text-[#22c55e]" : "bg-[#0a0a0a]/5 text-[#0a0a0a]"
-                }`}>
-                  {type === "incoming" && <IconArrowDown className="size-4" />}
-                  {type === "outgoing" && <IconArrowUp className="size-4" />}
-                </div>
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-[13px] text-[#0a0a0a] truncate font-medium">
-                    {t.narration || `${t.type === "DEPOSIT" ? "Payment" : "Payout"} ${t.status.toLowerCase()}`}
-                  </span>
-                  <span className="text-[10px] text-[#a3a3a3] font-medium">{t.groupName || "General"}</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-0.5 items-end shrink-0">
-                <span className={`text-[13px] font-semibold text-center tabular-nums ${amountColor}`}>
-                  {amountPrefix} {formatCurrency(Number(t.amount))}
-                </span>
-                <span className="text-[10px] text-[#a3a3a3]">{formatDate(t.createdAt)}</span>
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex flex-col items-center justify-center py-10 text-center">
+        <p className="text-sm text-[#737373]">No activity yet</p>
+        <p className="text-xs text-[#a3a3a3] mt-1">Payments and payouts will appear here.</p>
       </div>
     </div>
   );
@@ -233,19 +183,22 @@ function RecentActivity({ transactions }: { transactions: Transaction[] }) {
 
 export default function DashboardPage() {
   const [groups, setGroups] = useState<Group[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [groupsData, transactionsData] = await Promise.all([
-          getMyGroups(),
-          getMyTransactions(),
-        ]);
-        setGroups(groupsData);
-        setTransactions(transactionsData);
+        const allGroups = await getAllGroups();
+        const user = getUser();
+        if (user) {
+          const myGroups = allGroups.filter((g) =>
+            g.members?.some((m) => m.userId === user.id)
+          );
+          setGroups(myGroups);
+        } else {
+          setGroups([]);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load dashboard data");
       } finally {
@@ -288,22 +241,9 @@ export default function DashboardPage() {
     );
   }
 
-  const totalSavings = transactions
-    .filter((t) => t.type === "DEPOSIT" && t.status === "SUCCESS")
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
   const activeGroupCount = groups.filter((g) => g.status === "ACTIVE").length;
 
   const stats = [
-    {
-      label: "Total Savings",
-      value: formatCurrency(totalSavings),
-      subLabel: `${transactions.filter((t) => t.status === "SUCCESS").length} payments`,
-      subColor: "text-[#22c55e]",
-      iconBg: "bg-[#0f9d58]/10",
-      iconColor: "text-[#0f9d58]",
-      icon: <IconWallet className="size-7" />,
-    },
     {
       label: "Groups Joined",
       value: String(groups.length),
@@ -314,15 +254,6 @@ export default function DashboardPage() {
       icon: <IconPeople className="size-7" />,
     },
     {
-      label: "Completed Payments",
-      value: String(transactions.filter((t) => t.status === "SUCCESS").length),
-      subLabel: `${transactions.filter((t) => t.status === "PENDING").length} pending`,
-      subColor: "text-[#3b82f6]",
-      iconBg: "bg-[#3b82f6]/10",
-      iconColor: "text-[#3b82f6]",
-      icon: <IconShield className="size-7" />,
-    },
-    {
       label: "Pending Payment",
       value: groups.length > 0 ? formatCurrency(groups[0].contributionAmount) : "None",
       subLabel: groups.length > 0 ? "Next cycle" : "No groups",
@@ -330,6 +261,24 @@ export default function DashboardPage() {
       iconBg: "bg-[#ef4444]/10",
       iconColor: "text-[#ef4444]",
       icon: <IconCard className="size-7" />,
+    },
+    {
+      label: "Total Savings",
+      value: "—",
+      subLabel: "Coming soon",
+      subColor: "text-[#737373]",
+      iconBg: "bg-[#0f9d58]/10",
+      iconColor: "text-[#0f9d58]",
+      icon: <IconWallet className="size-7" />,
+    },
+    {
+      label: "Trust Score",
+      value: "—",
+      subLabel: "Coming soon",
+      subColor: "text-[#737373]",
+      iconBg: "bg-[#3b82f6]/10",
+      iconColor: "text-[#3b82f6]",
+      icon: <IconShield className="size-7" />,
     },
   ];
 
@@ -371,7 +320,7 @@ export default function DashboardPage() {
 
         <div className="w-[380px] flex flex-col gap-6 shrink-0">
           <UpcomingPayments groups={groups} />
-          <RecentActivity transactions={transactions} />
+          <RecentActivity />
         </div>
       </div>
     </div>

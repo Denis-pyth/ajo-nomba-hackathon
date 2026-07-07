@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getAllGroups, getMyGroups, joinGroup, Group } from "@/lib/api";
+import { getAllGroups, joinGroup, Group } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { IconPlus, IconPeople, IconArrowUpRight } from "../icons";
 
@@ -24,10 +24,17 @@ export default function GroupsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [myData, allData] = await Promise.all([getMyGroups(), getAllGroups()]);
-        setMyGroups(myData);
-        const myIds = new Set(myData.map((g) => g.id));
-        setAllGroups(allData.filter((g) => !myIds.has(g.id)));
+        const allData = await getAllGroups();
+        const user = getUser();
+        if (user) {
+          const myData = allData.filter((g) => g.members?.some((m) => m.userId === user.id));
+          setMyGroups(myData);
+          const myIds = new Set(myData.map((g) => g.id));
+          setAllGroups(allData.filter((g) => !myIds.has(g.id)));
+        } else {
+          setMyGroups([]);
+          setAllGroups(allData);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load groups");
       } finally {
@@ -43,7 +50,8 @@ export default function GroupsPage() {
     setJoining(groupId);
     try {
       await joinGroup(groupId, { userId: user.id });
-      const [myData, allData] = await Promise.all([getMyGroups(), getAllGroups()]);
+      const allData = await getAllGroups();
+      const myData = allData.filter((g) => g.members?.some((m) => m.userId === user.id));
       setMyGroups(myData);
       const myIds = new Set(myData.map((g) => g.id));
       setAllGroups(allData.filter((g) => !myIds.has(g.id)));

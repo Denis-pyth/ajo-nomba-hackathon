@@ -1,27 +1,16 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
-import { getMe, updateBankDetails, UserProfile } from "@/lib/api";
+import { useState, FormEvent } from "react";
+import { getUser } from "@/lib/auth";
+import { updateBankDetails } from "@/lib/api";
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const user = getUser();
   const [bankCode, setBankCode] = useState("");
   const [bankAccountNumber, setBankAccountNumber] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  useEffect(() => {
-    getMe()
-      .then((u) => {
-        setUser(u);
-        setBankCode(u.bankCode || "");
-        setBankAccountNumber(u.bankAccountNumber || "");
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load profile"))
-      .finally(() => setLoading(false));
-  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -44,29 +33,6 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="h-8 w-40 bg-[#f0f0f0] rounded animate-pulse" />
-        <div className="h-[300px] rounded-2xl bg-[#f0f0f0] animate-pulse" />
-      </div>
-    );
-  }
-
-  if (error && !user) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <p className="text-sm text-red-600 font-medium">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-5 py-2.5 rounded-full bg-[#0f9d58] text-white text-sm font-medium hover:bg-[#0e8f50] transition-colors"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-xl">
       <h1 className="text-xl font-semibold text-[#0a0a0a] mb-6">Settings</h1>
@@ -76,13 +42,8 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold text-[#0a0a0a] mb-4">Profile</h2>
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-[13px] text-[#737373]">Full Name</span>
-              <span className="text-[15px] font-medium text-[#0a0a0a]">{user?.fullName}</span>
-            </div>
-            <div className="h-px bg-[#f0f0f0]" />
-            <div className="flex items-center justify-between">
               <span className="text-[13px] text-[#737373]">Email</span>
-              <span className="text-[15px] font-medium text-[#0a0a0a]">{user?.email}</span>
+              <span className="text-[15px] font-medium text-[#0a0a0a]">{user?.email || "—"}</span>
             </div>
           </div>
         </div>
