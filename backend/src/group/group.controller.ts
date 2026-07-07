@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, Get, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GroupService } from './group.service';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -26,13 +26,5 @@ export class GroupController {
   @ApiOperation({ summary: 'Get all active groups' })
   getAllGroups() {
     return this.groupService.getAllGroups();
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a single group by ID' })
-  @ApiResponse({ status: 200, description: 'Group found' })
-  @ApiResponse({ status: 404, description: 'Group not found' })
-  async getGroupById(@Param('id') id: string) {
-    return await this.groupService.getGroupById(id);
   }
 }

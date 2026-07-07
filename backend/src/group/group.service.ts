@@ -80,13 +80,4 @@ export class GroupService {
   async getAllGroups() {
     return await this.ajoGroupRepo.find({ relations: { members: true } });
   }
-
-  async getGroupById(id: string) {
-    const group = await this.ajoGroupRepo.findOne({
-      where: { id },
-      relations: { members: true },
-    });
-    if (!group) throw new NotFoundException('Group not found');
-    return group;
-  }
 }
