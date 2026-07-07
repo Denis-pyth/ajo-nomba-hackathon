@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { isAuthenticated, clearAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -13,6 +15,18 @@ const navLinks = [
 
 export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    setLoggedIn(isAuthenticated());
+  }, []);
+
+  function handleLogout() {
+    clearAuth();
+    setLoggedIn(false);
+    router.push("/");
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-[#f0f0f0]">
@@ -41,18 +55,37 @@ export function Nav() {
         </div>
 
         <div className="hidden md:flex items-center gap-4">
-          <Link
-            href="/login"
-            className="text-[13px] font-medium text-[#0a0a0a] hover:text-[#0f9d58] transition-colors"
-          >
-            Log In
-          </Link>
-          <Link
-            href="/register"
-            className="px-5 py-2.5 rounded-full bg-[#0f9d58] text-white text-[13px] font-semibold hover:bg-[#0e8f50] transition-colors"
-          >
-            Register
-          </Link>
+          {loggedIn ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="text-[13px] font-medium text-[#0a0a0a] hover:text-[#0f9d58] transition-colors"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="px-5 py-2.5 rounded-full bg-[#0f9d58] text-white text-[13px] font-semibold hover:bg-[#0e8f50] transition-colors cursor-pointer"
+              >
+                Log Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="text-[13px] font-medium text-[#0a0a0a] hover:text-[#0f9d58] transition-colors"
+              >
+                Log In
+              </Link>
+              <Link
+                href="/register"
+                className="px-5 py-2.5 rounded-full bg-[#0f9d58] text-white text-[13px] font-semibold hover:bg-[#0e8f50] transition-colors"
+              >
+                Register
+              </Link>
+            </>
+          )}
         </div>
 
         <button
@@ -89,20 +122,43 @@ export function Nav() {
             </Link>
           ))}
           <div className="flex flex-col gap-4 pt-6 border-t border-[#f0f0f0]">
-            <Link
-              href="/login"
-              className="text-[17px] font-medium text-center text-[#0a0a0a] hover:text-[#0f9d58] transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              Log In
-            </Link>
-            <Link
-              href="/register"
-              className="px-5 py-3 rounded-full bg-[#0f9d58] text-white text-[17px] font-semibold hover:bg-[#0e8f50] transition-colors text-center"
-              onClick={() => setMenuOpen(false)}
-            >
-              Register
-            </Link>
+            {loggedIn ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-[17px] font-medium text-center text-[#0a0a0a] hover:text-[#0f9d58] transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMenuOpen(false);
+                  }}
+                  className="px-5 py-3 rounded-full bg-[#0f9d58] text-white text-[17px] font-semibold hover:bg-[#0e8f50] transition-colors text-center cursor-pointer"
+                >
+                  Log Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-[17px] font-medium text-center text-[#0a0a0a] hover:text-[#0f9d58] transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-5 py-3 rounded-full bg-[#0f9d58] text-white text-[17px] font-semibold hover:bg-[#0e8f50] transition-colors text-center"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

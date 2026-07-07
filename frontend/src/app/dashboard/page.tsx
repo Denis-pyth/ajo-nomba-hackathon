@@ -47,13 +47,13 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-4 px-5 py-4 rounded-2xl border border-[#f0f0f0] bg-white hover:border-[#0f9d58]/20 hover:shadow-md hover:shadow-[#0f9d58]/5 transition-all duration-200">
-      <div className={`flex items-center justify-center size-[56px] rounded-2xl ${iconBg} ${iconColor}`}>
+    <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl border border-[#f0f0f0] bg-white hover:border-[#0f9d58]/20 hover:shadow-md hover:shadow-[#0f9d58]/5 transition-all duration-200">
+      <div className={`flex items-center justify-center size-11 sm:size-[56px] rounded-2xl ${iconBg} ${iconColor} shrink-0`}>
         {icon}
       </div>
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-0.5 min-w-0">
         <span className="text-[10px] font-medium text-[#737373] uppercase tracking-[0.04em]">{label}</span>
-        <span className="text-lg font-semibold text-[#0a0a0a] tracking-[-0.01em]">{value}</span>
+        <span className="text-base sm:text-lg font-semibold text-[#0a0a0a] tracking-[-0.01em] truncate">{value}</span>
         {subLabel && (
           <span className={`text-[10px] font-medium ${subColor} bg-[#0a0a0a]/[0.03] px-2 py-0.5 rounded-lg w-fit`}>
             {subLabel}
@@ -70,24 +70,24 @@ function ActiveGroupCard({ group }: { group: Group }) {
   const freqBgClass = frequencyBg(freq);
 
   return (
-    <div className="flex flex-col gap-6 p-6 rounded-2xl bg-white border border-[#f0f0f0] hover:shadow-md transition-all duration-200">
+    <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl bg-white border border-[#f0f0f0] hover:shadow-md transition-all duration-200">
       <div className="flex items-center gap-3">
-        <div className={`flex items-center justify-center size-14 rounded-2xl ${freqBgClass} ${freqColorClass}`}>
-          <IconPeople className="size-7" />
+        <div className={`flex items-center justify-center size-12 sm:size-14 rounded-2xl ${freqBgClass} ${freqColorClass} shrink-0`}>
+          <IconPeople className="size-6 sm:size-7" />
         </div>
-        <div className="flex flex-col gap-4 flex-1">
+        <div className="flex flex-col gap-3 sm:gap-4 flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-[#0a0a0a]">{group.name}</span>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${freqBgClass} ${freqColorClass}`}>
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <span className="text-sm font-semibold text-[#0a0a0a] truncate">{group.name}</span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg shrink-0 ${freqBgClass} ${freqColorClass}`}>
                 {frequencyLabel(freq)}
               </span>
             </div>
-            <button className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors cursor-pointer">
+            <button className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors cursor-pointer shrink-0">
               <IconMoreVertical className="size-4" />
             </button>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-0 sm:items-center sm:justify-between">
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] text-[#a3a3a3] font-medium uppercase">Contribution</span>
               <span className="text-sm font-semibold text-[#0a0a0a]">{formatCurrency(group.contributionAmount)}</span>
@@ -116,7 +116,7 @@ function ActiveGroupCard({ group }: { group: Group }) {
           View Ledger
           <IconArrowUpRight className="size-3.5" />
         </Link>
-        <button className="bg-[#0f9d58] hover:bg-[#0e8f50] text-white px-5 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 shadow-lg shadow-[#0f9d58]/15 hover:shadow-xl hover:shadow-[#0f9d58]/20 active:scale-[0.98] cursor-pointer">
+        <button className="bg-[#0f9d58] hover:bg-[#0e8f50] text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 shadow-lg shadow-[#0f9d58]/15 hover:shadow-xl hover:shadow-[#0f9d58]/20 active:scale-[0.98] cursor-pointer">
           Make Payment
         </button>
       </div>
@@ -129,7 +129,7 @@ function UpcomingPayments({ groups }: { groups: Group[] }) {
   const nextGroup = activeGroups[0];
 
   return (
-    <div className="flex flex-col gap-6 p-5 rounded-2xl border border-[#f0f0f0] bg-white">
+    <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-5 rounded-2xl border border-[#f0f0f0] bg-white">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[#0a0a0a]">Upcoming Payments</h3>
       </div>
@@ -166,7 +166,7 @@ function UpcomingPayments({ groups }: { groups: Group[] }) {
 
 function RecentActivity() {
   return (
-    <div className="flex flex-col gap-6 p-5 rounded-2xl border border-[#f0f0f0] bg-white">
+    <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-5 rounded-2xl border border-[#f0f0f0] bg-white">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[#0a0a0a]">Recent Activity</h3>
         <Link href="/dashboard/payments" className="text-xs font-medium text-[#0f9d58] hover:underline underline-offset-2 cursor-pointer">
@@ -211,14 +211,14 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-[88px] rounded-2xl bg-[#f0f0f0] animate-pulse" />
           ))}
         </div>
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 h-[300px] rounded-2xl bg-[#f0f0f0] animate-pulse" />
-          <div className="w-[380px] flex flex-col gap-6">
+          <div className="w-full lg:w-[380px] flex flex-col gap-6">
             <div className="h-[180px] rounded-2xl bg-[#f0f0f0] animate-pulse" />
             <div className="h-[200px] rounded-2xl bg-[#f0f0f0] animate-pulse" />
           </div>
@@ -285,22 +285,22 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
       </div>
 
       {/* Main content */}
-      <div className="flex gap-6">
-        <div className="flex-1 flex flex-col gap-6 p-5 rounded-2xl border border-[#f0f0f0] bg-white">
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 flex flex-col gap-6 p-4 sm:p-5 rounded-2xl border border-[#f0f0f0] bg-white">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[#0a0a0a]">Active Groups</h3>
             <Link href="/dashboard/groups" className="text-xs font-medium text-[#0f9d58] hover:underline underline-offset-2 cursor-pointer">
               See All
             </Link>
           </div>
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 sm:gap-5">
             {groups.length === 0 && (
               <div className="flex flex-col gap-3 items-center py-10 text-center">
                 <p className="text-sm text-[#737373]">You haven&apos;t joined any groups yet.</p>
@@ -313,7 +313,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="w-[380px] flex flex-col gap-6 shrink-0">
+        <div className="w-full lg:w-[380px] flex flex-col gap-6 shrink-0">
           <UpcomingPayments groups={groups} />
           <RecentActivity />
         </div>

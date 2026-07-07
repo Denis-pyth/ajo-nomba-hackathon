@@ -22,6 +22,8 @@ import {
   IconVerified,
   IconChevronRight,
   IconLogout,
+  IconMenu,
+  IconClose,
 } from "./icons";
 
 const mainMenu = [
@@ -47,6 +49,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [user, setUser] = useState<StoredUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -74,9 +78,21 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex bg-[#fafafa]">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-[280px] min-h-screen flex flex-col justify-between p-6 sticky top-0 left-0 shrink-0 bg-gradient-to-b from-[#0f9d58]/[0.04] via-[#0f9d58]/[0.02] to-transparent border-r border-[#0f9d58]/10">
-        <div className="mb-8">
+      <aside
+        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[280px] flex flex-col justify-between p-6 shrink-0 bg-white border-r border-[#f0f0f0] transition-transform duration-300 lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-8">
           <Link href="/" className="relative inline-block h-10 w-[80px]">
             <Image
               src="/logo.png"
@@ -87,6 +103,13 @@ export default function DashboardLayout({
               sizes="80px"
             />
           </Link>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden size-10 flex items-center justify-center rounded-xl text-[#737373] hover:text-[#0a0a0a] hover:bg-[#0f9d58]/8 transition-all cursor-pointer"
+            aria-label="Close menu"
+          >
+            <IconClose className="size-5" />
+          </button>
         </div>
 
         <div className="flex-1 flex flex-col gap-9 overflow-y-auto">
@@ -117,11 +140,6 @@ export default function DashboardLayout({
                   >
                     <Icon />
                     <span className="flex-1">{item.label}</span>
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span className="flex items-center justify-center min-w-[22px] h-[22px] rounded-full bg-[#ef4444] text-white text-[11px] font-semibold px-1.5">
-                        {item.badge}
-                      </span>
-                    )}
                   </Link>
                 );
               })}
@@ -160,19 +178,11 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3">
+        <div className="mt-6 relative">
           <button
-            onClick={() => {
-              clearAuth();
-              router.push("/login");
-            }}
-            className="flex items-center gap-3 h-12 px-4 rounded-2xl text-sm font-medium text-[#737373] hover:bg-[#ef4444]/8 hover:text-[#ef4444] transition-all duration-200 cursor-pointer"
+            onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+            className="w-full flex items-center justify-between py-2.5 px-3 rounded-[56px] hover:bg-[#0f9d58]/8 transition-all duration-200 cursor-pointer"
           >
-            <IconLogout className="size-5" />
-            <span>Log Out</span>
-          </button>
-
-          <div className="flex items-center justify-between py-2.5 px-3 rounded-[56px] hover:bg-[#0f9d58]/8 transition-all duration-200 cursor-pointer">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="relative size-10 rounded-full overflow-hidden shrink-0 ring-2 ring-[#0f9d58]/20">
                 <Image
@@ -183,7 +193,7 @@ export default function DashboardLayout({
                   sizes="40px"
                 />
               </div>
-              <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="flex flex-col gap-0.5 min-w-0 text-left">
                 <span className="text-sm font-medium text-[#0a0a0a] truncate">
                   {user?.email || "Member"}
                 </span>
@@ -196,25 +206,49 @@ export default function DashboardLayout({
               </div>
             </div>
             <IconMoreVertical className="size-5 text-[#a3a3a3] shrink-0" />
-          </div>
+          </button>
+
+          {profileMenuOpen && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl border border-[#f0f0f0] shadow-lg p-2 z-50">
+              <button
+                onClick={() => {
+                  clearAuth();
+                  router.push("/login");
+                }}
+                className="w-full flex items-center gap-3 h-12 px-4 rounded-2xl text-sm font-medium text-[#737373] hover:bg-[#ef4444]/8 hover:text-[#ef4444] transition-all duration-200 cursor-pointer"
+              >
+                <IconLogout className="size-5" />
+                <span>Log Out</span>
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-8 min-w-0">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
         {/* TopNav */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-[#e5e5e5] w-[387px] bg-white shadow-sm transition-all duration-200 focus-within:border-[#0f9d58] focus-within:shadow-[0_0_0_4px_rgba(15,157,88,0.06)]">
-            <IconSearch className="size-5 text-[#a3a3a3]" />
-            <input
-              type="text"
-              placeholder="Search groups, payments, members..."
-              className="bg-transparent outline-none text-sm text-[#0a0a0a] placeholder:text-[#a3a3a3] w-full"
-            />
+        <div className="flex items-center gap-3 sm:gap-4 justify-between mb-6 sm:mb-8">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden size-10 flex items-center justify-center rounded-xl text-[#0a0a0a] hover:text-[#0f9d58] hover:bg-[#0f9d58]/8 transition-all cursor-pointer shrink-0"
+              aria-label="Open menu"
+            >
+              <IconMenu className="size-5" />
+            </button>
+            <div className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border border-[#e5e5e5] w-[180px] sm:w-[280px] lg:w-[387px] bg-white shadow-sm transition-all duration-200 focus-within:border-[#0f9d58] focus-within:shadow-[0_0_0_4px_rgba(15,157,88,0.06)]">
+              <IconSearch className="size-5 text-[#a3a3a3] shrink-0" />
+              <input
+                type="text"
+                placeholder="Search groups, payments, members..."
+                className="bg-transparent outline-none text-sm text-[#0a0a0a] placeholder:text-[#a3a3a3] w-full min-w-0"
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-8">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 lg:gap-8 shrink-0">
+            <div className="hidden sm:flex items-center gap-4">
               <button className="relative size-10 flex items-center justify-center rounded-xl text-[#0a0a0a] hover:text-[#0f9d58] hover:bg-[#0f9d58]/8 transition-all duration-200 cursor-pointer">
                 <IconMessage className="size-[22px]" />
               </button>
@@ -224,10 +258,11 @@ export default function DashboardLayout({
             </div>
             <Link
               href="/dashboard/groups/new"
-              className="flex items-center gap-1.5 bg-[#0f9d58] hover:bg-[#0e8f50] text-white px-5 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 shadow-lg shadow-[#0f9d58]/20 hover:shadow-xl hover:shadow-[#0f9d58]/25 active:scale-[0.98] cursor-pointer"
+              className="flex items-center gap-1.5 bg-[#0f9d58] hover:bg-[#0e8f50] text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 shadow-lg shadow-[#0f9d58]/20 hover:shadow-xl hover:shadow-[#0f9d58]/25 active:scale-[0.98] cursor-pointer shrink-0"
             >
               <IconPlus className="size-4" />
-              New Group
+              <span className="hidden sm:inline">New Group</span>
+              <span className="sm:hidden">New</span>
             </Link>
           </div>
         </div>
