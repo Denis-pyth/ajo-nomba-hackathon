@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { getAllGroups, joinGroup, Group } from "@/lib/api";
+import { getAllGroups, joinGroup, Group, getGroupStatementUrl, reconcileGroup, closeGroupVirtualAccount } from "@/lib/api";
 import { getUser } from "@/lib/auth";
-import { IconPeople, IconArrowUpRight } from "../icons";
+import { IconPeople, IconArrowUpRight, IconDocument, IconRefund, IconClose, IconMoreVertical } from "../icons";
+import ConfirmModal from "../../components/ConfirmModal";
 
 function formatCurrency(amount: number): string {
   return `₦${amount.toLocaleString("en-NG")}`;
@@ -44,7 +45,7 @@ export default function GroupsPage() {
     load();
   }, []);
 
-  async function handleJoin(groupId: string) {
+  async function handleJoin(groupId: string, onError: (msg: string) => void) {
     const user = getUser();
     if (!user) return;
     setJoining(groupId);
@@ -56,7 +57,7 @@ export default function GroupsPage() {
       const myIds = new Set(myData.map((g) => g.id));
       setAllGroups(allData.filter((g) => !myIds.has(g.id)));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to join group");
+      onError(err instanceof Error ? err.message : "Failed to join group");
     } finally {
       setJoining(null);
     }
@@ -93,6 +94,58 @@ export default function GroupsPage() {
   }
 
   function GroupCard({ group, isMember }: { group: Group; isMember: boolean }) {
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [reconciling, setReconciling] = useState(false);
+    const [reconcileMsg, setReconcileMsg] = useState<string | null>(null);
+    const [closing, setClosing] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [joinError, setJoinError] = useState<string | null>(null);
+    const [closeError, setCloseError] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      function handleClickOutside(event: MouseEvent) {
+        if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+          setMenuOpen(false);
+        }
+      }
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    async function handleReconcile() {
+      setReconciling(true);
+      setReconcileMsg(null);
+      try {
+        await reconcileGroup(group.id);
+        setReconcileMsg("Balance reconciled successfully!");
+        setTimeout(() => setReconcileMsg(null), 4000);
+      } catch (err) {
+        setReconcileMsg(err instanceof Error ? err.message : "Reconciliation failed");
+      } finally {
+        setReconciling(false);
+      }
+    }
+
+    function handleClose() {
+      setMenuOpen(false);
+      setConfirmOpen(true);
+    }
+
+    async function handleConfirmClose() {
+      setClosing(true);
+      setCloseError(null);
+      try {
+        await closeGroupVirtualAccount(group.id);
+        window.location.href = "/dashboard";
+      } catch (err) {
+        setCloseError(err instanceof Error ? err.message : "Failed to close group");
+      } finally {
+        setClosing(false);
+        setConfirmOpen(false);
+      }
+    }
+
     return (
       <div className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-6 rounded-2xl bg-white border border-[#f0f0f0] hover:shadow-md transition-all duration-200">
         <div className="flex items-start justify-between gap-3">
@@ -102,13 +155,69 @@ export default function GroupsPage() {
               {frequencyLabel(group.cycleFrequency)} · {formatCurrency(group.contributionAmount)} per cycle
             </span>
           </div>
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg shrink-0 ${
-            group.status === "ACTIVE" ? "bg-[#0f9d58]/10 text-[#0f9d58]" :
-            group.status === "PENDING" ? "bg-[#f59e0b]/10 text-[#f59e0b]" :
-            "bg-[#737373]/10 text-[#737373]"
-          }`}>
-            {group.status}
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg shrink-0 ${
+              group.status === "ACTIVE" ? "bg-[#0f9d58]/10 text-[#0f9d58]" :
+              group.status === "PENDING" ? "bg-[#f59e0b]/10 text-[#f59e0b]" :
+              "bg-[#737373]/10 text-[#737373]"
+            }`}>
+              {group.status}
+            </span>
+            {isMember && group.status !== "COMPLETED" && (
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors cursor-pointer shrink-0"
+                >
+                  <IconMoreVertical className="size-4" />
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-[#f0f0f0] shadow-lg p-2 z-10 flex flex-col gap-1">
+                    <a
+                      href={getGroupStatementUrl(group.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[#0f9d58] hover:bg-[#0f9d58]/8 transition-colors"
+                    >
+                      <IconDocument className="size-4" />
+                      Download Statement
+                    </a>
+                    <button
+                      onClick={() => { setMenuOpen(false); handleReconcile(); }}
+                      disabled={reconciling}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[#3b82f6] hover:bg-[#3b82f6]/8 transition-colors disabled:opacity-60 text-left cursor-pointer"
+                    >
+                      {reconciling ? (
+                        <svg className="animate-spin size-4" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                          <path d="M4 12a8 8 0 0 1 8-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <IconRefund className="size-4" />
+                      )}
+                      {reconciling ? "Reconciling..." : "Reconcile Balance"}
+                    </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); handleClose(); }}
+                      disabled={closing}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[#ef4444] hover:bg-[#ef4444]/8 transition-colors disabled:opacity-60 text-left cursor-pointer"
+                    >
+                      {closing ? (
+                        <svg className="animate-spin size-4" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                          <path d="M4 12a8 8 0 0 1 8-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <IconClose className="size-4" />
+                      )}
+                      {closing ? "Closing..." : "Close Group"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-4 text-[11px] text-[#737373]">
@@ -132,6 +241,26 @@ export default function GroupsPage() {
           </div>
         )}
 
+        {reconcileMsg && (
+          <div className={`text-xs font-medium px-3 py-2 rounded-xl ${
+            reconcileMsg.includes("success") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+          }`}>
+            {reconcileMsg}
+          </div>
+        )}
+
+        {joinError && (
+          <div className="text-xs font-medium px-3 py-2 rounded-xl bg-red-50 text-red-700">
+            {joinError}
+          </div>
+        )}
+
+        {closeError && (
+          <div className="text-xs font-medium px-3 py-2 rounded-xl bg-red-50 text-red-700">
+            {closeError}
+          </div>
+        )}
+
         <div className="flex items-center justify-between mt-auto">
           {isMember ? (
             <Link
@@ -143,7 +272,10 @@ export default function GroupsPage() {
             </Link>
           ) : (
             <button
-              onClick={() => handleJoin(group.id)}
+              onClick={() => {
+                setJoinError(null);
+                handleJoin(group.id, (msg) => setJoinError(msg));
+              }}
               disabled={joining === group.id}
               className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#0f9d58] text-white text-sm font-medium hover:bg-[#0e8f50] transition-colors disabled:opacity-60 cursor-pointer"
             >
@@ -151,6 +283,18 @@ export default function GroupsPage() {
             </button>
           )}
         </div>
+
+        <ConfirmModal
+          isOpen={confirmOpen}
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={handleConfirmClose}
+          title="Close Group"
+          message="Close this group and expire its virtual account? This action cannot be undone."
+          confirmLabel="Close Group"
+          cancelLabel="Cancel"
+          isLoading={closing}
+          danger
+        />
       </div>
     );
   }

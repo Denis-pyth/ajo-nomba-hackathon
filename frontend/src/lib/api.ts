@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ajo-backend-ua6o.onrender.com";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ajo-backend-ua6o.onrender.com";
 
 export interface RegisterRequest {
   fullName: string;
@@ -145,5 +145,21 @@ export async function updateBankDetails(data: UpdateBankDetailsRequest): Promise
   return fetchApi<{ message: string; bankCode: string; bankAccountNumber: string }>("/users/profile/bank", {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+export function getGroupStatementUrl(groupId: string): string {
+  return `${API_BASE_URL}/groups/${groupId}/statement`;
+}
+
+export async function reconcileGroup(groupId: string): Promise<{ message: string; groupId: string; nombaData: any }> {
+  return fetchApi<{ message: string; groupId: string; nombaData: any }>(`/groups/${groupId}/reconcile`, {
+    method: "GET",
+  });
+}
+
+export async function closeGroupVirtualAccount(groupId: string): Promise<Group> {
+  return fetchApi<Group>(`/groups/${groupId}/virtual-account`, {
+    method: "DELETE",
   });
 }

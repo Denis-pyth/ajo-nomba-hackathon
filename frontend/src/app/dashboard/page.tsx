@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { getAllGroups, Group } from "@/lib/api";
+import { getAllGroups, Group, getGroupStatementUrl, reconcileGroup, closeGroupVirtualAccount } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import {
   IconPeople,
@@ -11,7 +11,11 @@ import {
   IconWallet,
   IconArrowUpRight,
   IconMoreVertical,
+  IconDocument,
+  IconRefund,
+  IconClose,
 } from "./icons";
+import ConfirmModal from "../components/ConfirmModal";
 
 function formatCurrency(amount: number): string {
   return `₦${amount.toLocaleString("en-NG")}`;
@@ -65,9 +69,60 @@ function StatCard({
 }
 
 function ActiveGroupCard({ group }: { group: Group }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileMsg, setReconcileMsg] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const freq = group.cycleFrequency;
   const freqColorClass = frequencyColor(freq);
   const freqBgClass = frequencyBg(freq);
+
+  async function handleReconcile() {
+    setReconciling(true);
+    setReconcileMsg(null);
+    try {
+      await reconcileGroup(group.id);
+      setReconcileMsg("Balance reconciled successfully!");
+      setTimeout(() => setReconcileMsg(null), 4000);
+    } catch (err) {
+      setReconcileMsg(err instanceof Error ? err.message : "Reconciliation failed");
+    } finally {
+      setReconciling(false);
+    }
+  }
+
+  function handleClose() {
+    setMenuOpen(false);
+    setConfirmOpen(true);
+  }
+
+  async function handleConfirmClose() {
+    setClosing(true);
+    setCloseError(null);
+    try {
+      await closeGroupVirtualAccount(group.id);
+      window.location.href = "/dashboard";
+    } catch (err) {
+      setCloseError(err instanceof Error ? err.message : "Failed to close group");
+    } finally {
+      setClosing(false);
+      setConfirmOpen(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl bg-white border border-[#f0f0f0] hover:shadow-md transition-all duration-200">
@@ -83,9 +138,58 @@ function ActiveGroupCard({ group }: { group: Group }) {
                 {frequencyLabel(freq)}
               </span>
             </div>
-            <button className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors cursor-pointer shrink-0">
-              <IconMoreVertical className="size-4" />
-            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors cursor-pointer shrink-0"
+              >
+                <IconMoreVertical className="size-4" />
+              </button>
+              {menuOpen && group.status !== "COMPLETED" && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-[#f0f0f0] shadow-lg p-2 z-10 flex flex-col gap-1">
+                  <a
+                    href={getGroupStatementUrl(group.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[#0f9d58] hover:bg-[#0f9d58]/8 transition-colors"
+                  >
+                    <IconDocument className="size-4" />
+                    Download Statement
+                  </a>
+                  <button
+                    onClick={() => { setMenuOpen(false); handleReconcile(); }}
+                    disabled={reconciling}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[#3b82f6] hover:bg-[#3b82f6]/8 transition-colors disabled:opacity-60 text-left cursor-pointer"
+                  >
+                    {reconciling ? (
+                      <svg className="animate-spin size-4" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                        <path d="M4 12a8 8 0 0 1 8-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                      </svg>
+                    ) : (
+                      <IconRefund className="size-4" />
+                    )}
+                    {reconciling ? "Reconciling..." : "Reconcile Balance"}
+                  </button>
+                  <button
+                    onClick={() => { setMenuOpen(false); handleClose(); }}
+                    disabled={closing}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[#ef4444] hover:bg-[#ef4444]/8 transition-colors disabled:opacity-60 text-left cursor-pointer"
+                  >
+                    {closing ? (
+                      <svg className="animate-spin size-4" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                        <path d="M4 12a8 8 0 0 1 8-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                      </svg>
+                    ) : (
+                      <IconClose className="size-4" />
+                    )}
+                    {closing ? "Closing..." : "Close Group"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-0 sm:items-center sm:justify-between">
             <div className="flex flex-col gap-0.5">
@@ -108,6 +212,20 @@ function ActiveGroupCard({ group }: { group: Group }) {
         </div>
       </div>
 
+      {reconcileMsg && (
+        <div className={`text-xs font-medium px-3 py-2 rounded-xl ${
+          reconcileMsg.includes("success") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+        }`}>
+          {reconcileMsg}
+        </div>
+      )}
+
+      {closeError && (
+        <div className="text-xs font-medium px-3 py-2 rounded-xl bg-red-50 text-red-700">
+          {closeError}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <Link
           href={`/dashboard/ledger?group=${group.id}`}
@@ -120,6 +238,18 @@ function ActiveGroupCard({ group }: { group: Group }) {
           Make Payment
         </button>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmClose}
+        title="Close Group"
+        message="Close this group and expire its virtual account? This action cannot be undone."
+        confirmLabel="Close Group"
+        cancelLabel="Cancel"
+        isLoading={closing}
+        danger
+      />
     </div>
   );
 }
