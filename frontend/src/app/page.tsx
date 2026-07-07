@@ -1,15 +1,31 @@
 import { Nav } from "./components/Nav";
 import { Hero } from "./components/Hero";
-import { MacStudioMockup } from "./components/MacStudioMockup";
+import { DashboardMockup } from "./components/DashboardMockup";
+import { ProblemSection } from "./components/ProblemSection";
+import { FeaturesSection } from "./components/FeaturesSection";
+import { HowItWorks } from "./components/HowItWorks";
+import { WaysToSave } from "./components/WaysToSave";
+import { Testimonials } from "./components/Testimonials";
+import { FAQs } from "./components/FAQs";
+import { GetStarted } from "./components/GetStarted";
+import { Footer } from "./components/Footer";
 
 export default function Home() {
   return (
     <div className="flex flex-col items-center bg-white min-h-full">
-      <main className="flex flex-col items-center w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 gap-8 md:gap-14">
-        <Nav />
+      <Nav />
+      <main className="flex flex-col items-center w-full">
         <Hero />
-        <MacStudioMockup />
+        <DashboardMockup />
+        <ProblemSection />
+        <FeaturesSection />
+        <HowItWorks />
+        <WaysToSave />
+        <Testimonials />
+        <FAQs />
+        <GetStarted />
       </main>
+      <Footer />
     </div>
   );
 }
