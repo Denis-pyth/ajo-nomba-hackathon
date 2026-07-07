@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { AjoGroup } from '../entities/ajo-group.entity';
 import { GroupMember } from '../entities/group-member.entity';
 import { User } from '../entities/user.entity';
+import { Transaction } from '../entities/transaction.entity'; 
 import { CreateGroupDto } from './dto/create-group.dto';
 import { JoinGroupDto } from './dto/join-group.dto';
 import { NombaVirtualAccountService } from '../nomba/nomba-virtual-account.service';
@@ -16,6 +17,7 @@ export class GroupService {
     @InjectRepository(AjoGroup) private ajoGroupRepo: Repository<AjoGroup>,
     @InjectRepository(GroupMember) private groupMemberRepo: Repository<GroupMember>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(Transaction) private transactionRepo: Repository<Transaction>, // <-- Injected for CSV Generation
     private readonly nombaVirtualAccountService: NombaVirtualAccountService,
   ) {}
 
@@ -79,5 +81,64 @@ export class GroupService {
 
   async getAllGroups() {
     return await this.ajoGroupRepo.find({ relations: { members: true } });
+  }
+
+  // =========================================================================
+  // NEW: INFRASTRUCTURE TRACK REQUIREMENTS
+  // =========================================================================
+
+  /**
+   * Utility to find a group by ID (Used by the controller for reconciliation)
+   */
+  async findById(groupId: string) {
+    const group = await this.ajoGroupRepo.findOne({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Group not found');
+    return group;
+  }
+
+  /**
+   * Closes the Ajo Group and expires the Nomba VA
+   */
+  async closeGroup(groupId: string) {
+    const group = await this.ajoGroupRepo.findOne({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Group not found');
+
+    // 1. Tell Nomba to expire the account to prevent zombie payments
+    await this.nombaVirtualAccountService.expireVirtualAccount(group.nombaVirtualAccountId);
+
+    // 2. Update local DB state
+    (group as any).status = 'COMPLETED'; // Assuming a status column exists
+    
+    const savedGroup = await this.ajoGroupRepo.save(group);
+    this.logger.log(`Group ${savedGroup.id} closed and VA expired.`);
+    
+    return savedGroup;
+  }
+
+  /**
+   * Fetches and formats transaction history into a CSV string for Customer Statements
+   */
+  async generateGroupStatementCsv(groupId: string): Promise<string> {
+    // Fetch transactions ordered by date
+    const transactions = await this.transactionRepo.find({
+      where: { group: { id: groupId } },
+      relations: { user: true }, 
+      order: { createdAt: 'DESC' },
+    });
+
+    // Create CSV Headers
+    let csv = 'Date,Reference,User,Type,Amount(NGN),Status\n';
+
+    // Map data to CSV rows
+    transactions.forEach((tx) => {
+      const date = tx.createdAt ? tx.createdAt.toISOString() : new Date().toISOString();
+      const user = tx.user ? tx.user.fullName : 'System';
+      const amount = tx.amount; 
+      
+      csv += `${date},${tx.nombaReference || 'N/A'},${user},${tx.type || 'DEPOSIT'},${amount},${tx.status || 'SUCCESS'}\n`;
+    });
+
+    this.logger.log(`Generated CSV statement for group ${groupId}`);
+    return csv;
   }
 }

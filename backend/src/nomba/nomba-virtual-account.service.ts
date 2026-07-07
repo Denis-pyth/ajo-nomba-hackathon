@@ -61,4 +61,76 @@ export class NombaVirtualAccountService {
       throw new InternalServerErrorException(error.message || 'Could not generate deposit account');
     }
   }
+
+  // =========================================================================
+  // NEW: EXPIRE VIRTUAL ACCOUNT (For when the Ajo Group finishes)
+  // =========================================================================
+  async expireVirtualAccount(identifier: string) {
+    const baseUrl = this.configService.get<string>('NOMBA_API_BASE_URL');
+    const parentAccountId = this.configService.get<string>('NOMBA_ACCOUNT_ID')!;
+    const token = await this.nombaAuthService.getToken();
+
+    this.logger.log(`Expiring virtual account: ${identifier}`);
+
+    try {
+      const response = await fetch(`${baseUrl}/v1/accounts/virtual/${identifier}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'accountId': parentAccountId 
+        },
+      });
+
+      const rawData = await response.json();
+      
+      this.logger.log(`Nomba VA Expiry Raw Response: ${JSON.stringify(rawData)}`);
+
+      if (!response.ok || rawData.status === false || rawData.code === '400') {
+        throw new Error(`VA Expiry failed: ${rawData.message || rawData.description}`);
+      }
+
+      return rawData.data || rawData; 
+
+    } catch (error: any) {
+      this.logger.error(`Failed to expire Nomba Virtual Account ${identifier}`, error);
+      throw new InternalServerErrorException(error.message || 'Could not expire virtual account');
+    }
+  }
+
+  // =========================================================================
+  // NEW: RECONCILE INFLOWS (Fallback Transactions API to check for missed webhooks)
+  // =========================================================================
+  async reconcileAccountInflows() {
+    const baseUrl = this.configService.get<string>('NOMBA_API_BASE_URL');
+    const parentAccountId = this.configService.get<string>('NOMBA_ACCOUNT_ID')!;
+    // Using the same subAccountId we used to create it
+    const subAccountId = this.configService.get<string>('NOMBA_SUB_ACCOUNT_ID')!; 
+    const token = await this.nombaAuthService.getToken();
+
+    this.logger.log(`Reconciling transactions for Sub-Account: ${subAccountId}`);
+
+    try {
+      const response = await fetch(`${baseUrl}/v1/transactions/accounts/${subAccountId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'accountId': parentAccountId 
+        },
+      });
+
+      const rawData = await response.json();
+
+      if (!response.ok || rawData.status === false || rawData.code === '400') {
+        throw new Error(`Transactions fetch failed: ${rawData.message || rawData.description}`);
+      }
+
+      return rawData.data || rawData; 
+
+    } catch (error: any) {
+      this.logger.error('Failed to reconcile Nomba Transactions', error);
+      throw new InternalServerErrorException(error.message || 'Could not fetch transactions');
+    }
+  }
 }
