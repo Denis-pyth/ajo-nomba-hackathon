@@ -8,11 +8,13 @@ Ajo digitizes and automates the traditional African rotating savings model (Ajo 
 
 ## Live Demo
 
-| | |
-|---|---|
-| 🌐 **App** | https://ajo-nomba-hackathon.vercel.app/ |
-| 🔧 **Backend API** | https://ajo-backend-ua6o.onrender.com |
-| 📖 **Swagger / API Docs** | https://ajo-backend-ua6o.onrender.com/api/docs |
+| Resource | URL |
+|:---|:---|
+| **GitHub Repository** | https://github.com/Denis-pyth/ajo-nomba-hackathon |
+| **🌐 Live App (Vercel)** | https://ajo-nomba-hackathon.vercel.app/ |
+| **🔧 Backend API (Render)** | https://ajo-backend-ua6o.onrender.com |
+| **📖 Swagger / API Docs** | https://ajo-backend-ua6o.onrender.com/api/docs |
+| **🎨 Figma UI/UX Designs** | https://www.figma.com/design/HGuN1fhVYES7DhqVNerycp/Ajo?node-id=0-1&t=rMwbmzqKPY5QCEF1-1 |
 
 ## Monorepo Structure
 
@@ -172,6 +174,17 @@ npm run start:dev
 ```
 
 Swagger UI will be live at `http://localhost:3000/api/docs`.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+# Open http://localhost:3000
+```
+
+See [`frontend/README.md`](./frontend/README.md) for the full environment variable list, routes, and design system.
 
 ## Testing the Flow
 
