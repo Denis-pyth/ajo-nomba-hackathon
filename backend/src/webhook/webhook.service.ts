@@ -29,12 +29,20 @@ export class WebhookService {
     private readonly nombaTransferService: NombaTransferService,
   ) {}
 
-  async handleNombaPayment(payload: NombaWebhookDto, signature: string) {
-    // --- 1. SECURITY & VALIDATION --- 
+  async handleNombaPayment(payload: NombaWebhookDto, signature: string, rawBody?: Buffer) {
+    // --- 1. SECURITY & VALIDATION ---
     const secret = this.configService.get<string>('NOMBA_WEBHOOK_SECRET');
     if (!secret) throw new InternalServerErrorException('Webhook configuration error');
 
-    const expectedHash = crypto.createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex');
+    // FIX: verify against the raw request bytes (what Nomba actually
+    // signed) when available. Re-serializing the parsed payload via
+    // JSON.stringify can differ in key order/whitespace from the original
+    // bytes and cause legitimate webhooks to fail verification. We keep
+    // the JSON.stringify path only as a fallback for environments/tests
+    // where raw body capture isn't wired up.
+    const dataToVerify = rawBody && rawBody.length > 0 ? rawBody : Buffer.from(JSON.stringify(payload));
+    const expectedHash = crypto.createHmac('sha256', secret).update(dataToVerify).digest('hex');
+
     if (signature !== expectedHash && signature !== 'bypass-test') {
       this.logger.error('Webhook signature mismatch! Rejecting payload.');
       throw new UnauthorizedException('Invalid webhook signature');

@@ -1,5 +1,7 @@
-import { Controller, Post, Body, Headers, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Headers, HttpCode, HttpStatus, Logger, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 import { WebhookService } from './webhook.service';
 import { NombaWebhookDto } from './dto/nomba-webhook.dto';
 
@@ -28,13 +30,16 @@ export class WebhookController {
   })
   @ApiResponse({ status: 200, description: 'Webhook successfully received and processed.' })
   async handleNombaWebhook(
+    @Req() req: RawBodyRequest<Request>,
     @Body() payload: NombaWebhookDto,
     @Headers('nomba-signature') signature: string,
     @Headers('nomba-signature-algorithm') algorithm: string,
   ) {
     this.logger.log(`Incoming Nomba Webhook Payload...`);
     
-    // Pass the payload and the signature to the service for SHA-256 verification
-    return await this.webhookService.handleNombaPayment(payload, signature || '');
+    // Pass both the parsed payload and the raw bytes — the service verifies
+    // the signature against the raw bytes (what Nomba actually signed) and
+    // falls back to the parsed payload only if raw bytes aren't available.
+    return await this.webhookService.handleNombaPayment(payload, signature || '', req.rawBody);
   }
 }
