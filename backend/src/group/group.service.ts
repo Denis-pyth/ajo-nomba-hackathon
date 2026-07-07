@@ -37,16 +37,34 @@ export class GroupService {
       throw new InternalServerErrorException(error.message || 'Could not generate deposit account');
     }
 
-    // Safety guard to guarantee the account token mapping contains the correct key
-    if (!virtualAccountData || !virtualAccountData.bankAccountNumber) {
-      this.logger.error(`Nomba returned success but bankAccountNumber field was empty: ${JSON.stringify(virtualAccountData)}`);
+    // -------------------------------------------------------------------
+    // FIX: Nomba's VA-creation response field name for the account number
+    // has been observed under a few different keys depending on API
+    // version/environment ("accountNumber" is the documented field, but
+    // "bankAccountNumber" / "virtualAccountNumber" / "nuban" have also
+    // shown up). Rather than hard-coding one key and silently breaking
+    // every deposit match downstream if it's wrong, we check all known
+    // candidates and log clearly if none are found.
+    // -------------------------------------------------------------------
+    const accountNumber =
+      virtualAccountData?.accountNumber ||
+      virtualAccountData?.bankAccountNumber ||
+      virtualAccountData?.virtualAccountNumber ||
+      virtualAccountData?.nuban;
+
+    if (!virtualAccountData || !accountNumber) {
+      this.logger.error(
+        `Nomba returned success but no recognizable account number field was found: ${JSON.stringify(virtualAccountData)}`,
+      );
       throw new BadRequestException('Could not extract bank account fields from payment provider');
     }
 
-    // 2. Save the group with the REAL bankAccountNumber returned from Nomba
+    this.logger.log(`Resolved Nomba Virtual Account Number: ${accountNumber}`);
+
+    // 2. Save the group with the REAL account number returned from Nomba
     const group = this.ajoGroupRepo.create({
       ...dto,
-      nombaVirtualAccountId: virtualAccountData.bankAccountNumber, // <-- FIX APPLIED
+      nombaVirtualAccountId: accountNumber,
     });
 
     const savedGroup = await this.ajoGroupRepo.save(group);
@@ -84,7 +102,7 @@ export class GroupService {
   }
 
   // =========================================================================
-  // NEW: INFRASTRUCTURE TRACK REQUIREMENTS
+  // INFRASTRUCTURE TRACK REQUIREMENTS
   // =========================================================================
 
   /**
