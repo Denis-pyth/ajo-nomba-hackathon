@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
 import { AjoGroup } from './ajo-group.entity';
 import { User } from './user.entity';
 
@@ -19,15 +19,12 @@ export class Transaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // The missing 'amount' column
   @Column('decimal', { precision: 12, scale: 2 })
   amount: number;
 
-  // Syncing the name with your service logic
   @Column({ unique: true })
   nombaReference: string;
 
-  // The missing 'narration' column
   @Column({ nullable: true })
   narration: string;
 
@@ -37,8 +34,16 @@ export class Transaction {
   @Column({ type: 'enum', enum: TransactionType })
   type: TransactionType;
 
+  // NEW: Store raw Nomba webhook payloads for audit/reconciliation
+  @Column({ type: 'jsonb', nullable: true })
+  metaData: any;
+
   @CreateDateColumn()
   createdAt: Date;
+
+  // NEW: Track when a PENDING transaction updates to SUCCESS
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   // Relationships
   @ManyToOne(() => AjoGroup, (group) => group.transactions)
