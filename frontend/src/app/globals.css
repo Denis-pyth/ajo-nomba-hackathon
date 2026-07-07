@@ -2,9 +2,11 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
   --ajo-primary: #0f9d58;
-  --ajo-grey: #808080;
+  --ajo-grey: #737373;
+  --ajo-light: #f5f5f5;
+  --ajo-dark: #0a0a0a;
 }
 
 @theme inline {
@@ -12,11 +14,58 @@
   --color-foreground: var(--foreground);
   --color-ajo-primary: var(--ajo-primary);
   --color-ajo-grey: var(--ajo-grey);
+  --color-ajo-light: var(--ajo-light);
+  --color-ajo-dark: var(--ajo-dark);
   --font-sans: var(--font-poppins);
+  --animate-scroll-up: scroll-up 20s linear infinite;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-spin-slow: spin-slow 60s linear infinite;
+  --animate-marquee: marquee 30s linear infinite;
+}
+
+@keyframes scroll-up {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes shrink {
+  0% { width: 0%; }
+  100% { width: 100%; }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-poppins), Arial, Helvetica, sans-serif;
+}
+
+.animate-scroll-up {
+  animation: scroll-up 20s linear infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 60s linear infinite;
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
 }
