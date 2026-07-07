@@ -29,7 +29,7 @@ export function Nav() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-[#f0f0f0]">
+    <nav className="sticky top-0 z-50 w-full bg-gradient-to-b from-[#0f9d58]/[0.1] via-transparent to-transparent backdrop-blur-md border-b border-[#f0f0f0]/50">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-16 py-4">
         <Link href="/" className="relative h-10 w-[90px] shrink-0">
           <Image
@@ -110,7 +110,7 @@ export function Nav() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden border-t border-[#f0f0f0] bg-white/95 backdrop-blur-md px-6 py-8 flex flex-col gap-6">
+        <div className="md:hidden border-t border-[#f0f0f0]/50 bg-gradient-to-b from-[#0f9d58]/[0.1] via-transparent to-transparent backdrop-blur-md px-6 py-8 flex flex-col gap-6">
           {navLinks.map((link) => (
             <Link
               key={link.label}
