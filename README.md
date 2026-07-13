@@ -157,16 +157,18 @@ Required environment variables:
 
 ```env
 DATABASE_URL="postgres://user:password@localhost:5432/ajo_db"
-JWT_SECRET="your_secure_jwt_secret"
+JWT_SECRET="any-string-you-like"
 
-NOMBA_CLIENT_ID="your_nomba_client_id"
-NOMBA_SECRET="your_nomba_client_secret"
-NOMBA_ACCOUNT_ID="your_nomba_parent_account_id"
-NOMBA_SUB_ACCOUNT_ID="your_nomba_sub_account_id"
+NOMBA_CLIENT_ID="706df6c4-b8bb-4130-88c4-d21b052f8631"
+NOMBA_SECRET="k8UobYk3APgOoxUnNL7VpuxzwTsH4LsXtydfjcHs8RH0YISBB4OMqJsaafG+U8fWETu9YZ96bNXE+DelCDuMPw=="
+NOMBA_ACCOUNT_ID="f666ef9b-888e-4799-85ce-acb505b28023"
+NOMBA_SUB_ACCOUNT_ID="d26a43a0-c2ff-4da8-813a-eb71bb639eb5"
 NOMBA_API_BASE_URL="https://sandbox.nomba.com"
 
-NOMBA_WEBHOOK_SECRET="your_nomba_webhook_secret_key"
+NOMBA_WEBHOOK_SECRET="any-string-you-like"
 ```
+
+The Nomba credentials above are sandbox-scoped and provided so the API can be run and tested immediately without requesting your own. `JWT_SECRET` and `NOMBA_WEBHOOK_SECRET` just need to be any non-empty string for a local instance — see [Testing the Flow](#testing-the-flow) for how webhook signatures are handled locally.
 
 ```bash
 # 3. Run
@@ -192,9 +194,11 @@ See [`frontend/README.md`](./frontend/README.md) for the full environment variab
 2. `PATCH /users/profile/bank` → attach a NUBAN + bank code
 3. `POST /groups` → creates a group + a real Nomba sandbox Virtual Account
 4. `POST /groups/:id/join` → add members (minimum 2 required to activate rotation)
-5. `POST /webhook/nomba` → simulate a deposit against the group's virtual account number, matching the target pot
+5. `POST /webhook/nomba` → simulate a deposit against the group's virtual account number, matching the target pot. Set the `nomba-signature` header to `bypass-test` to skip live signature verification during local testing.
 6. Watch the logs: signature verification → NIBSS lookup → outbound transfer fired
 7. `GET /groups/:id/statement` → download the CSV ledger to confirm the full audit trail
+
+This flow is best run against the local setup above rather than the live Render deployment linked in [Live Demo](#live-demo), since that instance is wired to production Nomba credentials and a simulated deposit there would attempt a real transfer.
 
 ## How We Map to the Judging Rubric
 
